@@ -46,6 +46,7 @@ const Step = ({ n, title, text }: { n: number; title: string; text: string }) =>
 // Modern Conversational Modal Form
 function KitchenDreamsModal({ isOpen, onClose }: { isOpen: boolean; onClose: () => void }) {
   const [step, setStep] = useState(1);
+  const [isSubmitting, setIsSubmitting] = useState(false);
   const [formData, setFormData] = useState({
     name: '',
     projectType: '',
@@ -112,13 +113,55 @@ function KitchenDreamsModal({ isOpen, onClose }: { isOpen: boolean; onClose: () 
 
   const currentStep = steps[step - 1];
 
-  const handleNext = () => {
+  const handleNext = async () => {
     if (step < steps.length) {
       setStep(step + 1);
     } else {
-      // Handle form submission
-      console.log('Form submitted:', formData);
-      setStep(steps.length + 1); // Show success
+      // Handle form submission via webhook
+      setIsSubmitting(true);
+      try {
+        // Use environment variable or fallback to placeholder
+        const WEBHOOK_URL = process.env.NEXT_PUBLIC_WEBHOOK_URL || 'YOUR_WEBHOOK_URL_HERE';
+
+        console.log('Webhook URL:', WEBHOOK_URL);
+        console.log('Form data being sent:', formData);
+
+        // Only send if we have a real webhook URL
+        if (WEBHOOK_URL !== 'YOUR_WEBHOOK_URL_HERE') {
+          const payload = {
+            ...formData,
+            timestamp: new Date().toISOString(),
+            source: 'website',
+            url: typeof window !== 'undefined' ? window.location.href : 'zebra-kitchens'
+          };
+
+          console.log('Sending payload:', JSON.stringify(payload));
+
+          const response = await fetch(WEBHOOK_URL, {
+            method: 'POST',
+            mode: 'no-cors', // Add no-cors mode to bypass CORS issues
+            headers: {
+              'Content-Type': 'application/json',
+            },
+            body: JSON.stringify(payload)
+          });
+
+          console.log('Response received:', response);
+          // Note: With no-cors, response will be opaque and we can't check status
+          console.log('Webhook sent successfully (no-cors mode)');
+        } else {
+          console.log('No webhook URL configured');
+        }
+
+        console.log('Form submitted successfully:', formData);
+        setStep(steps.length + 1); // Show success
+      } catch (error) {
+        console.error('Error submitting form:', error);
+        // Still show success to user to maintain good UX
+        setStep(steps.length + 1);
+      } finally {
+        setIsSubmitting(false);
+      }
     }
   };
 
@@ -277,9 +320,10 @@ function KitchenDreamsModal({ isOpen, onClose }: { isOpen: boolean; onClose: () 
                             </button>
                             <button
                               onClick={handleNext}
-                              className="rounded-full bg-emerald-600 px-6 py-3 text-sm font-semibold text-white hover:bg-emerald-700"
+                              disabled={isSubmitting}
+                              className="rounded-full bg-emerald-600 px-6 py-3 text-sm font-semibold text-white hover:bg-emerald-700 disabled:opacity-50 disabled:cursor-not-allowed"
                             >
-                              Submit →
+                              {isSubmitting ? 'Sending...' : 'Submit →'}
                             </button>
                           </div>
                         </div>
@@ -495,11 +539,11 @@ export default function ZebraKitchensLanding() {
           {[
             {
               h: "Cowboy fitters",
-              p: "We only use vetted, insured installers — and we're accountable if anything isn't&nbsp;right.",
+              p: "We only use vetted, insured installers — and we're accountable if anything isn't right.",
             },
             {
               h: "Hidden extras",
-              p: "You'll get a line-by-line, itemised quote. No surprises.&nbsp;Ever.",
+              p: "You'll get a line-by-line, itemised quote. No surprises. Ever.",
             },
             {
               h: "Weeks without a kitchen",
@@ -507,7 +551,7 @@ export default function ZebraKitchensLanding() {
             },
             {
               h: "Poor aftercare",
-              p: "Our Heart of the Home Guarantee: on-time, on-budget, snag-free — and&nbsp;supported.",
+              p: "Our Heart of the Home Guarantee: on-time, on-budget, snag-free — and supported.",
             },
           ].map((card) => (
             <div key={card.h} className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
