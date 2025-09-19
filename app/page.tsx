@@ -139,7 +139,6 @@ function KitchenDreamsModal({ isOpen, onClose }: { isOpen: boolean; onClose: () 
 
           const response = await fetch(WEBHOOK_URL, {
             method: 'POST',
-            mode: 'no-cors', // Add no-cors mode to bypass CORS issues
             headers: {
               'Content-Type': 'application/json',
             },
@@ -147,8 +146,14 @@ function KitchenDreamsModal({ isOpen, onClose }: { isOpen: boolean; onClose: () 
           });
 
           console.log('Response received:', response);
-          // Note: With no-cors, response will be opaque and we can't check status
-          console.log('Webhook sent successfully (no-cors mode)');
+          console.log('Response status:', response.status);
+          console.log('Response ok:', response.ok);
+
+          if (response.ok) {
+            console.log('Webhook sent successfully!');
+          } else {
+            console.error('Webhook failed with status:', response.status);
+          }
         } else {
           console.log('No webhook URL configured');
         }
